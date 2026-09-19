@@ -1,10 +1,11 @@
 [project]
 name = "ml-npl"
 version = "0.1.0"
-description = ""
+description = "Team 4 — Sentiment Analysis (NLP). Machine Learning 2026-III, Universidad Distrital Francisco José de Caldas."
 authors = [
     {name = "JulianCelisCreator",email = "celisjuliandavid@gmail.com"}
 ]
+license = "MIT"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
