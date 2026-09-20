@@ -135,7 +135,9 @@ def summary(frame: pd.DataFrame) -> str:
     """Short human-readable description used for the EDA report."""
     ratings = frame["Rating"].value_counts().sort_index()
     majority_share = ratings.max() / len(frame)
-    words = frame["Review_Text"].str.split().str.len()
+    # str.count over non-space runs rather than str.split().str.len(): same
+    # numbers, but it survives null review bodies once cleaning introduces them.
+    words = frame["Review_Text"].str.count(r"\S+")
 
     lines = [
         f"rows: {len(frame):,}",
