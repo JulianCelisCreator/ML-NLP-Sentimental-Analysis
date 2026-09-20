@@ -12,3 +12,6 @@ __pycache__/
 Thumbs.db
 
 CLAUDE.md
+
+## Derived data (reproducible with: poetry run python -m ml_npl.dataset)
+ML_NPL/data/

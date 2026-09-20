@@ -16,8 +16,14 @@ from kagglehub.exceptions import KaggleApiHTTPError
 
 DATASET_HANDLE = "arushchillar/disneyland-reviews"
 
-# The published CSV is Latin-1 encoded: reviewer locations and review bodies
-# contain bytes that are not valid UTF-8, so the pandas default fails.
+# Anchored to the package, not to the working directory: notebooks run with
+# their own folder as cwd, and a relative path would scatter copies around.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_EXPORT_PATH = PROJECT_ROOT / "data" / "raw" / "disneyland_reviews.csv"
+
+# The published CSV is Latin-1 encoded. Only 4 of the 42,656 rows carry
+# non-ASCII bytes, all of them in Reviewer_Location, but that is enough to make
+# the UTF-8 default fail on the whole file.
 CSV_ENCODING = "latin-1"
 
 EXPECTED_COLUMNS = (
@@ -101,6 +107,28 @@ def load_reviews(*, validate_schema: bool = True) -> pd.DataFrame:
     if validate_schema:
         validate(frame)
     return frame
+
+
+def export_csv(
+    destination: Path | str = DEFAULT_EXPORT_PATH,
+    *,
+    overwrite: bool = False,
+) -> Path:
+    """Write the whole corpus to a CSV inside the project and return its path.
+
+    The Kaggle copy is Latin-1; this export is UTF-8, so every later step reads
+    it without the encoding dance. The file is reproducible from the dataset
+    handle, so it belongs in .gitignore rather than in a commit.
+    """
+    destination = Path(destination)
+    if destination.exists() and not overwrite:
+        msg = f"{destination} already exists; pass overwrite=True to replace it"
+        raise FileExistsError(msg)
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    frame = load_reviews()
+    frame.to_csv(destination, index=False, encoding="utf-8")
+    return destination
 
 
 def summary(frame: pd.DataFrame) -> str:
