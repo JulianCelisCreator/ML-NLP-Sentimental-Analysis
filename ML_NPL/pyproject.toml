@@ -9,10 +9,12 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "kagglehub (>=1.0.2,<2.0.0)",
+    "pandas (>=3.0.6,<4.0.0)",
 ]
 
 [tool.poetry]
-packages = [{include = "ml_npl", from = "src"}]
+packages = [{include = "ml_npl"}]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
