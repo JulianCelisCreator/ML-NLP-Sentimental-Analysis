@@ -20,33 +20,31 @@ The project is built around a dataset of **42,656 Disneyland park reviews**, fea
 ---
 
 ## Repository Structure
+
+```
 ML_NPL/
-├── checkpoints/ # Saved model weights (populated from Workshop 2 onward)
-├── data/ # Split files and dataset metadata (raw data downloaded separately)
-├── ml_npl/ # Core Python package: reusable modules imported across workshops
-│ ├── dataset.py # Data loading and preprocessing pipeline
-│ ├── features.py # Feature engineering / extraction
-│ ├── baselines.py # Baseline model training and evaluation
-│ └── ... # New modules added as workshops progress
-├── notebooks/ # Jupyter notebooks for exploration and analysis (EDA, experiments)
-├── runs/ # Training logs (wandb / TensorBoard)
-├── src/ # Entry-point / orchestration scripts that use the ml_npl package
-├── download_dataset.py # Script to download and verify dataset integrity
+├── checkpoints/          # Saved model weights (populated from Workshop 2 onward)
+├── data/                 # Split files and dataset metadata (raw data downloaded separately)
+├── notebooks/             # Jupyter notebooks for exploration and analysis (EDA, experiments)
+├── runs/                  # Training logs (wandb / TensorBoard)
+├── src/                    # Entry-point / orchestration scripts that use the ml_npl package
+├── download_dataset.py     # Script to download and verify dataset integrity
 ├── poetry.lock
 ├── pyproject.toml
-└── README.md # This file
+└── README.md               # This file
+```
 
 Reports for each workshop are kept separately, outside the codebase:
 
+```
 reports/
-├── Workshop #1/ # Data Preparation & Supervised Learning Baselines
-├── Workshop #2/ # Deep Learning Basics
-├── Workshop #3/ # Reinforcement Learning
-├── Workshop #4/ # Unsupervised Learning
-├── Workshop #5/ # Generative Models (GANs)
-└── Workshop #6/ # Domain Adaptation
-
-> **Note:** the `ml_npl` package is versioned and evolves incrementally across workshops — it is **not** duplicated per workshop. Each workshop's report documents which state of the code (git tag) produced its results.
+├── Workshop #1/   # Data Preparation & Supervised Learning Baselines
+├── Workshop #2/   # Deep Learning Basics
+├── Workshop #3/   # Reinforcement Learning
+├── Workshop #4/   # Unsupervised Learning
+├── Workshop #5/   # Generative Models (GANs)
+└── Workshop #6/   # Domain Adaptation
+```
 
 ---
 
