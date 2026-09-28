@@ -27,9 +27,10 @@ def normalize_text(text):
 
 def run_pipeline():
     # --- 0. charge data ---
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(current_dir)
-    route = os.path.join(current_dir, 'data', 'raw', 'DisneylandReviews.csv')
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    route = os.path.join(BASE_DIR, "data", "raw", "disneyland_reviews.csv")
+    if not os.path.exists(route):
+        raise FileNotFoundError(f"not file found in the next route: {route}")
     df = pd.read_csv(route, encoding='latin-1')
     print(f"Data original shape: {df.shape}")
 
