@@ -291,3 +291,46 @@ def correlation_matrix(frame: pd.DataFrame, columns: list[str], ax=None):
     ax.set_title("Spearman correlation")
     plt.colorbar(image, ax=ax, shrink=0.8, label="rho")
     return ax
+
+
+# Sequential blue colormap for confusion matrices: counts are magnitude, not
+# polarity, so a sequential ramp is the honest choice (the diverging scale,
+# centred at zero, would imply a meaningful midpoint that does not exist here).
+CONFUSION_CMAP = LinearSegmentedColormap.from_list(
+    "viz_confusion", ["#fcfcfb", "#86b6ef", "#184f95"]
+)
+
+
+def confusion_heatmap(matrix, labels, title="Confusion matrix", ax=None):
+    """Heatmap of a confusion matrix (rows = true, cols = predicted).
+
+    Shading is normalised per row (so colour reads as recall for each true
+    class), while the printed numbers are the raw counts. That keeps the
+    diagonal readable even when one class dominates — which it does here, with
+    positives at ~80% of the data.
+    """
+    import numpy as np
+
+    matrix = np.asarray(matrix)
+    row_totals = matrix.sum(axis=1, keepdims=True)
+    shade = np.divide(matrix, row_totals, where=row_totals != 0)
+
+    ax = ax or plt.subplots(figsize=(5.2, 4.4))[1]
+    image = ax.imshow(shade, cmap=CONFUSION_CMAP, vmin=0, vmax=1)
+
+    ax.set_xticks(range(len(labels)), labels, rotation=45, ha="right")
+    ax.set_yticks(range(len(labels)), labels)
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("True")
+
+    for i in range(len(labels)):
+        for j in range(len(labels)):
+            count = matrix[i, j]
+            ax.annotate(
+                f"{count:,}", (j, i), ha="center", va="center", fontsize=9,
+                color="white" if shade[i, j] > 0.55 else INK_PRIMARY,
+            )
+    ax.grid(visible=False)
+    ax.set_title(title)
+    plt.colorbar(image, ax=ax, shrink=0.8, label="share of true class (recall)")
+    return ax

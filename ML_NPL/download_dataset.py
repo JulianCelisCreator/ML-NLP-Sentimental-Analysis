@@ -7,7 +7,7 @@ Run it with:
 The file lands in data/raw/disneyland_reviews.csv, encoded as UTF-8.
 """
 
-from ml_npl.dataset import MissingKaggleCredentialsError, export_csv
+from src.dataset import MissingKaggleCredentialsError, export_csv
 
 
 def main() -> int:
