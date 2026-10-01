@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import numpy as np
 from sklearn.dummy import DummyClassifier
+from sklearn.ensemble import RandomForestClassifier 
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     classification_report,
@@ -142,6 +143,30 @@ def run() -> list[dict]:
     results.append(
         evaluate("Baseline 1 - Logistic Regression", logreg, data["x_val"], data["y_val"])
     )
+
+    # Baseline 2 — RandomforestClassifier (tree based ensemble required by the PDF).
+    # class_weight balanced to fight the imbalance;max_feature None because there are few features 
+    # n estimators more trees help the debalance, in the phase of hypermeter tuning explore diferent values
+    #limit the max_depth avoid overfitting
+    
+    rndmforestcl = RandomForestClassifier(
+        n_estimators=400,
+        max_depth=50,
+        #max_features="none" 
+        criterion="gini",
+        class_weight="balanced_subsample",#dataset imbalance
+        n_jobs= -1,
+        random_state=RANDOM_STATE,
+        
+
+
+
+    )
+    rndmforestcl.fit(data["x_train"], data["y_train"])
+    results.append(
+        evaluate("Baseline 2 - Random Forest", rndmforestcl, data["x_val"], data["y_val"])
+        )
+    
 
     # Comparison table (macro-F1 is what ranks them).
     print(f"\n{'=' * 60}\nSUMMARY (validation)\n{'=' * 60}")
