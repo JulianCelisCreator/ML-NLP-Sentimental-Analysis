@@ -9,7 +9,7 @@ from src import eda, plots
 from src.preprocessing import build_splits, load_splits
 
 reviews = load_reviews()                                   # 42,656 validated rows
-clean = build_splits()                                     # clean + split -> data/splits.json
+clean = build_splits()                                     # clean + split -> data/gold/splits.json
 ```
 
 ## Module responsibilities
@@ -46,7 +46,7 @@ preprocessing.py
     ├── Step 3: Parse period ('missing' -> NaT)  (whole dataset)
     ├── Step 4: Create sentiment target          (whole dataset)
     │
-    └── Split dataset (stratified) -> data/splits.json
+    └── Split dataset (stratified) -> data/gold/splits.json
             ├── 70% Training
             ├── 15% Validation
             └── 15% Testing
@@ -79,7 +79,7 @@ live.
 - **Step 3 — Parse period:** converts the `"missing"` sentinel to `NaT`.
 - **Step 4 — Create sentiment:** three-class target derived from `Rating`.
 - **Split + save:** stratified 70/15/15 on the target, persisted as row
-  indices in `data/splits.json` (with the frozen `random_state`), so later
+  indices in `data/gold/splits.json` (with the frozen `random_state`), so later
   work loads the split instead of re-splitting randomly.
 
 Steps 1–4 are properties of the data and run before the split; the duplicate

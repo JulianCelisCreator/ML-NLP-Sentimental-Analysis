@@ -11,9 +11,12 @@ Run it with:
 
 from __future__ import annotations
 
+import hashlib
+from pathlib import Path
+
 import pandas as pd
 
-from .dataset import load_reviews, summary
+from .dataset import BRONZE_DIR, load_reviews, summary
 from .eda import RATING_COL, add_text_features, class_balance, column_inventory
 from .preprocessing import TARGET_COL, clean_dataset
 
@@ -24,8 +27,40 @@ def _section(title: str) -> None:
     print(f"\n{'=' * 60}\n{title}\n{'=' * 60}")
 
 
+def file_digest(path: Path, algorithm: str = "sha256") -> str:
+    """Hash a file in chunks, so a 31 MB corpus never lands in memory twice."""
+    digest = hashlib.new(algorithm)
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def describe_bronze() -> None:
+    """File inventory and checksums for the landing zone.
+
+    The brief asks for file counts, sizes and MD5/SHA256 checksums. The point
+    is that a teammate can prove they are working from the same bytes: the
+    corpus is not in git, so the checksum is the only shared evidence.
+    """
+    _section("BRONZE LAYER — files, sizes, checksums")
+    if not BRONZE_DIR.exists():
+        print(f"  {BRONZE_DIR} does not exist — run download_dataset.py first")
+        return
+    files = sorted(path for path in BRONZE_DIR.iterdir() if path.is_file())
+    print(f"  files: {len(files)}")
+    for path in files:
+        size_mb = path.stat().st_size / 1024**2
+        print(f"\n  {path.name}")
+        print(f"    size   : {size_mb:,.2f} MB ({path.stat().st_size:,} bytes)")
+        print(f"    md5    : {file_digest(path, 'md5')}")
+        print(f"    sha256 : {file_digest(path, 'sha256')}")
+
+
 def main() -> int:
     """Print a structured description of the raw and cleaned corpus."""
+    describe_bronze()
+
     raw = load_reviews()
 
     _section("RAW CORPUS")
