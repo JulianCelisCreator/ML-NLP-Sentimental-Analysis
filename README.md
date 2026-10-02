@@ -24,7 +24,7 @@ The project is built around a dataset of **42,656 Disneyland park reviews**, fea
 ```
 ML_NPL/
 ├── checkpoints/          # Saved model weights (populated from Workshop 2 onward)
-├── data/                 # Split files and dataset metadata (raw data downloaded separately)
+├── data/                 # Medallion layers: bronze (raw) / silver (clean) / gold (splits)
 ├── notebooks/             # Jupyter notebooks for exploration and analysis (EDA, experiments)
 ├── runs/                  # Training logs (wandb / TensorBoard)
 ├── src/                    # Entry-point / orchestration scripts that use the ml_npl package
@@ -83,7 +83,7 @@ python download_dataset.py
 python -m ml_npl.baselines
 ```
 
-Train/validation/test splits are fixed and stored in `data/splits.json` — they are generated once and reused across all workshops to prevent data leakage and ensure reproducibility.
+Train/validation/test splits are fixed and stored in `data/gold/splits.json` — they are generated once and reused across all workshops to prevent data leakage and ensure reproducibility.
 
 ---
 
@@ -91,5 +91,6 @@ Train/validation/test splits are fixed and stored in `data/splits.json` — they
 
 * **Reproducibility:** random seeds fixed for numpy, Python, and sklearn/torch at the start of every script.
 * **No data leakage:** all statistics and transformations are fit on the training set only.
-* **Consistent splits:** `data/splits.json` is generated once and never re-randomized.
+* **Consistent splits:** `data/gold/splits.json` is generated once and never re-randomized.
+* **Medallion layers:** `data/` separates bronze (as published), silver (cleaned, materialised) and gold (the frozen split). See [`ML_NPL/data/README.md`](ML_NPL/data/README.md).
 * **Metric selection:** given class imbalance in review ratings, accuracy is never used as the sole metric — precision, recall, F1-score, and AUC-ROC are reported where applicable.

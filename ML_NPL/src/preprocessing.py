@@ -28,7 +28,6 @@ from sklearn.model_selection import train_test_split
 
 from .dataset import load_reviews
 from .eda import (
-    MISSING_SENTINEL,
     RATING_COL,
     TEXT_COL,
     PERIOD_COL,
@@ -39,7 +38,29 @@ from .eda import (
 # Anchored to the package, not the working directory: notebooks run with their
 # own folder as cwd, and a relative path would scatter copies around.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SPLITS_PATH = PROJECT_ROOT / "data" / "splits.json"
+
+# Medallion layers. Bronze is owned by src/dataset.py; this module writes the
+# two downstream ones.
+#
+#   bronze/  the Kaggle CSV exactly as published — never edited
+#   silver/  cleaned, deduplicated, target attached, period parsed
+#   gold/    the frozen train/validation/test split, ready for modelling
+#
+# Silver is MATERIALISED rather than recomputed per call, and that is the point
+# of the layer: gold stores positional indices into silver, so those indices
+# are only meaningful against a frozen frame. Recomputing the cleaning on the
+# fly would let a change in pandas, or in the dedup order, silently repoint
+# every split row at a different review.
+DATA_DIR = PROJECT_ROOT / "data"
+SILVER_DIR = DATA_DIR / "silver"
+GOLD_DIR = DATA_DIR / "gold"
+DEFAULT_SILVER_PATH = SILVER_DIR / "reviews.parquet"
+DEFAULT_SPLITS_PATH = GOLD_DIR / "splits.json"
+
+# The Workshop #1 brief names `data/splits.json` as a required artifact, so the
+# split is also written there. Gold stays canonical; this is the spec-compliant
+# alias, and both files are byte-identical.
+SPEC_SPLITS_PATH = DATA_DIR / "splits.json"
 
 RANDOM_STATE = 42  # frozen across every script, so results stay comparable
 TARGET_COL = "sentiment"
@@ -50,6 +71,11 @@ TARGET_COL = "sentiment"
 __all__ = [
     "RANDOM_STATE",
     "TARGET_COL",
+    "DEFAULT_SILVER_PATH",
+    "DEFAULT_SPLITS_PATH",
+    "SPEC_SPLITS_PATH",
+    "build_silver",
+    "load_silver",
     "clean_dataset",
     "split_dataset",
     "save_splits",
@@ -89,6 +115,44 @@ def clean_dataset(frame: pd.DataFrame, *, scheme: str = "three_class") -> pd.Dat
     out = out.dropna(subset=[TARGET_COL, TEXT_COL])
 
     return out.reset_index(drop=True)
+
+
+def build_silver(
+    *,
+    scheme: str = "three_class",
+    destination: Path | str = DEFAULT_SILVER_PATH,
+) -> Path:
+    """Clean the bronze corpus and persist it as the silver layer.
+
+    Parquet rather than CSV because silver carries typed columns a CSV cannot
+    round-trip: ``sentiment`` is categorical and ``period`` is a monthly
+    Period. Writing them as text would force every reader to re-derive them,
+    and a reader that forgot would get strings instead.
+    """
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    clean = clean_dataset(load_reviews(), scheme=scheme)
+    # Period has no parquet representation; store the month as a timestamp and
+    # let load_silver() restore the type, so the round-trip is lossless.
+    out = clean.copy()
+    out["period"] = out["period"].dt.to_timestamp()
+    out.to_parquet(destination, index=False)
+    return destination
+
+
+def load_silver(
+    source: Path | str = DEFAULT_SILVER_PATH,
+    *,
+    scheme: str = "three_class",
+) -> pd.DataFrame:
+    """Return the silver layer, building it first if it is not on disk."""
+    source = Path(source)
+    if not source.exists():
+        build_silver(scheme=scheme, destination=source)
+    frame = pd.read_parquet(source)
+    frame["period"] = frame["period"].dt.to_period("M")
+    frame[TARGET_COL] = frame[TARGET_COL].astype("category")
+    return frame
 
 
 def split_dataset(
@@ -153,8 +217,12 @@ def save_splits(
         "validation": x_val.index.tolist(),
         "test": x_test.index.tolist(),
     }
-    with destination.open("w", encoding="utf-8") as file:
-        json.dump(splits, file, indent=2)
+    payload = json.dumps(splits, indent=2)
+    destination.write_text(payload, encoding="utf-8")
+    # Mirror to the path the brief asks for, unless that is already the target.
+    if destination.resolve() != SPEC_SPLITS_PATH.resolve():
+        SPEC_SPLITS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        SPEC_SPLITS_PATH.write_text(payload, encoding="utf-8")
     return destination
 
 
@@ -174,14 +242,17 @@ def build_splits(
     scheme: str = "three_class",
     destination: Path | str = DEFAULT_SPLITS_PATH,
 ) -> pd.DataFrame:
-    """End-to-end: load the raw corpus, clean it, split it, and save the split.
+    """Bronze -> silver -> gold, in one call.
 
-    Returns the cleaned DataFrame whose index the saved split refers to.
+    Returns the silver frame the saved split indexes into. The split is read
+    back from silver on disk rather than from a frame held in memory, so the
+    indices in gold are guaranteed to address the same rows a later run will
+    load.
     """
-    clean = clean_dataset(load_reviews(), scheme=scheme)
-    x_train, x_val, x_test, *_ = split_dataset(clean)
+    silver = load_silver(scheme=scheme)
+    x_train, x_val, x_test, *_ = split_dataset(silver)
     save_splits(x_train, x_val, x_test, destination=destination)
-    return clean
+    return silver
 
 
 if __name__ == "__main__":

@@ -14,13 +14,14 @@ poetry install
 # Kaggle credentials: kaggle.com -> Settings -> API -> Create New Token
 mkdir -p ~/.kaggle && mv ~/Downloads/kaggle.json ~/.kaggle/ && chmod 600 ~/.kaggle/kaggle.json
 
-poetry run python download_dataset.py     # corpus -> data/raw/ (31 MB, gitignored)
+poetry run python download_dataset.py     # corpus -> data/bronze/ (31 MB, gitignored)
+poetry run python -m src.preprocessing    # -> data/silver/ and data/gold/
 ```
 
-Then open `notebooks/EDA.ipynb`, or re-run it headlessly:
+Then open `notebooks/eda.ipynb`, or re-run it headlessly:
 
 ```bash
-poetry run jupyter nbconvert --to notebook --execute --inplace notebooks/EDA.ipynb
+poetry run jupyter nbconvert --to notebook --execute --inplace notebooks/eda.ipynb
 ```
 
 ## Layout
@@ -31,7 +32,7 @@ ML_NPL/
 │   ├── dataset.py   # Kaggle download, schema validation, load_reviews()
 │   ├── eda.py       # statistics: quality report, text features, n-grams
 │   └── plots.py     # figures on a colour-blind-validated palette
-├── notebooks/EDA.ipynb
+├── notebooks/eda.ipynb
 ├── download_dataset.py
 └── tests/
 ```
@@ -68,4 +69,4 @@ command.
 * **No user column exists**, so user leakage cannot be assessed. This is a standing
   limitation of any result from this corpus.
 
-Details, figures and the full leakage analysis are in `notebooks/EDA.ipynb`.
+Details, figures and the full leakage analysis are in `notebooks/eda.ipynb`.

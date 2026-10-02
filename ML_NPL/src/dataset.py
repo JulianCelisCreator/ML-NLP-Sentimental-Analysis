@@ -19,7 +19,18 @@ DATASET_HANDLE = "arushchillar/disneyland-reviews"
 # Anchored to the package, not to the working directory: notebooks run with
 # their own folder as cwd, and a relative path would scatter copies around.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_EXPORT_PATH = PROJECT_ROOT / "data" / "raw" / "disneyland_reviews.csv"
+
+# Medallion layout. This module owns BRONZE only: the corpus exactly as Kaggle
+# published it, Latin-1 and all. Nothing here cleans, filters or reshapes —
+# that is silver's job (src/preprocessing.py). Keeping the landing zone
+# untouched is what lets the whole pipeline be replayed from a known origin.
+DATA_DIR = PROJECT_ROOT / "data"
+BRONZE_DIR = DATA_DIR / "bronze"
+DEFAULT_EXPORT_PATH = BRONZE_DIR / "disneyland_reviews.csv"
+
+# Pre-medallion location, still honoured so an existing checkout keeps working
+# without re-downloading 31 MB.
+LEGACY_RAW_DIR = DATA_DIR / "raw"
 
 # The published CSV is Latin-1 encoded. Only 4 of the 42,656 rows carry
 # non-ASCII bytes, all of them in Reviewer_Location, but that is enough to make
@@ -100,19 +111,19 @@ def validate(frame: pd.DataFrame) -> None:
         raise ValueError(msg)
 
 
-RAW_DIR = PROJECT_ROOT / "data" / "raw"
-
-
 def _find_local_csv() -> Path | None:
-    """Return a CSV already sitting in data/raw/, if any.
+    """Return a CSV already sitting in the bronze layer, if any.
 
-    Lets a teammate drop the Kaggle download in data/raw/ by hand and run the
-    whole pipeline without API credentials. The filename does not matter: the
-    largest CSV wins, same rule as the Kaggle cache.
+    Lets a teammate drop the Kaggle download in data/bronze/ by hand and run
+    the whole pipeline without API credentials. The filename does not matter:
+    the largest CSV wins, same rule as the Kaggle cache.
     """
-    if not RAW_DIR.exists():
-        return None
-    candidates = list(RAW_DIR.glob("*.csv"))
+    candidates = [
+        path
+        for directory in (BRONZE_DIR, LEGACY_RAW_DIR)
+        if directory.exists()
+        for path in directory.glob("*.csv")
+    ]
     if not candidates:
         return None
     return max(candidates, key=lambda path: path.stat().st_size)
@@ -121,7 +132,7 @@ def _find_local_csv() -> Path | None:
 def load_reviews(*, validate_schema: bool = True) -> pd.DataFrame:
     """Return the raw reviews as a DataFrame.
 
-    Prefers a CSV placed in data/raw/ (no Kaggle credentials needed); falls
+    Prefers a CSV placed in data/bronze/ (no Kaggle credentials needed); falls
     back to downloading from Kaggle only when nothing local is found.
     """
     local = _find_local_csv()
