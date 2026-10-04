@@ -27,18 +27,24 @@ poetry run jupyter nbconvert --to notebook --execute --inplace notebooks/EDA.ipy
 
 ```
 ML_NPL/
-├── ml_npl/
-│   ├── dataset.py   # Kaggle download, schema validation, load_reviews()
-│   ├── eda.py       # statistics: quality report, text features, n-grams
-│   └── plots.py     # figures on a colour-blind-validated palette
+├── src/
+│   ├── dataset.py        # Kaggle download, schema validation, load_reviews()
+│   ├── eda.py            # statistics: quality report, text features, n-grams
+│   ├── plots.py          # figures on a colour-blind-validated palette
+│   ├── preprocessing.py  # clean + target + stratified split -> splits.json
+│   ├── features.py       # TF-IDF + scaler + class weights (fit on train only)
+│   ├── dataset_info.py   # prints a structured dataset summary
+│   └── baselines.py      # the three baseline classifiers (pending)
 ├── notebooks/EDA.ipynb
-├── download_dataset.py
-└── tests/
+├── data/splits.json      # fixed train/val/test indices (reproducibility)
+└── download_dataset.py
 ```
 
-The three modules do not import each other: each takes a DataFrame and returns something,
-and the notebook wires them together. Later workshops import `load_reviews()` and
-`sentiment_from_rating()` so every stage trains on exactly the same data and labels.
+The base layers (`dataset`, `eda`, `plots`) take a DataFrame and return something,
+without importing each other. `preprocessing` builds on `dataset` + `eda`; `features`
+builds on `eda`. Later workshops load the frozen split from `data/splits.json` and import
+`load_reviews()` / `sentiment_from_rating()`, so every stage trains on exactly the same
+data and labels.
 
 `data/` and `reports/` hold derived output and are gitignored — both regenerate from a
 command.

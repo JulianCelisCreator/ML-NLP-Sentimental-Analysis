@@ -27,7 +27,7 @@ ML_NPL/
 ├── data/                 # Split files and dataset metadata (raw data downloaded separately)
 ├── notebooks/             # Jupyter notebooks for exploration and analysis (EDA, experiments)
 ├── runs/                  # Training logs (wandb / TensorBoard)
-├── src/                    # Entry-point / orchestration scripts that use the ml_npl package
+├── src/                    # Python package: data pipeline, EDA, features, baselines
 ├── download_dataset.py     # Script to download and verify dataset integrity
 ├── poetry.lock
 ├── pyproject.toml
@@ -63,24 +63,67 @@ reports/
 
 ## Setup
 
-This project uses [Poetry](https://python-poetry.org/) for dependency management.
+All commands below run from the **`ML_NPL/` directory** (the folder that contains `src/`),
+so `from src...` imports resolve:
 
 ```bash
-# Install dependencies
-poetry install
+cd ML_NPL
+```
 
-# Activate the environment
+Pick one of the two environments.
+
+### Option A — Poetry (requires Poetry 2.x)
+
+```bash
+poetry install
 poetry shell
+```
+
+> If you get `The Poetry configuration is invalid: fields ['authors', 'description',
+> 'name', 'version'] are required in package mode`, your Poetry is 1.x. The project uses
+> the modern `[project]` layout, so upgrade with `pip install -U poetry` (do **not** edit
+> `pyproject.toml` to downgrade it). Check with `poetry --version`.
+
+### Option B — Plain venv (no Poetry needed)
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install pandas scikit-learn matplotlib seaborn nltk langdetect kagglehub ipykernel
+```
+
+## Get the dataset
+
+Either download it through the API, or drop the CSV in by hand — the pipeline prefers a
+local file and only hits Kaggle as a fallback.
+
+```bash
+# Option 1: via the Kaggle API (needs a token in ~/.kaggle/kaggle.json)
+python download_dataset.py          # -> data/raw/disneyland_reviews.csv
+
+# Option 2: by hand — download from
+#   https://www.kaggle.com/datasets/arushchillar/disneyland-reviews
+# and place the CSV anywhere inside data/raw/ (any filename works)
 ```
 
 ## Reproducing Results
 
-```bash
-# 1. Download and verify the dataset
-python download_dataset.py
+With Poetry, prefix each command with `poetry run`; with the venv, run them directly.
 
-# 2. Run the data pipeline / baselines (see reports/Workshop #1/ for details)
-python -m ml_npl.baselines
+```bash
+# 1. Build the reproducible train/val/test split -> data/splits.json
+python -m src.preprocessing
+
+# 2. Print a structured dataset summary (counts per class, feature ranges, dtypes)
+python -m src.dataset_info
+
+# 3. Open the EDA notebook
+jupyter notebook notebooks/EDA.ipynb
+#   if it reports "ModuleNotFoundError: src", launch it from ML_NPL/ with:
+#   PYTHONPATH=. jupyter notebook notebooks/EDA.ipynb
+
+# 4. Run the baselines (see reports/Workshop #1/ for details) — pending
+# python -m src.baselines
 ```
 
 Train/validation/test splits are fixed and stored in `data/splits.json` — they are generated once and reused across all workshops to prevent data leakage and ensure reproducibility.
