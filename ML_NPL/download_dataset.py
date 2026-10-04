@@ -4,7 +4,8 @@ Run it with:
 
     poetry run python download_dataset.py
 
-The file lands in data/raw/disneyland_reviews.csv, encoded as UTF-8.
+The file lands in data/bronze/disneyland_reviews.csv, encoded as UTF-8.
+That is the bronze layer: the corpus as published, never edited downstream.
 """
 
 from src.dataset import MissingKaggleCredentialsError, export_csv

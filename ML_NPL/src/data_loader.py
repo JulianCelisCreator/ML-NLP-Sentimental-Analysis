@@ -26,3 +26,13 @@ warnings.warn(
     DeprecationWarning,
     stacklevel=2,
 )
+
+# Re-exported on purpose: this module exists only to keep the old import path
+# working. __all__ states that intent so the names do not read as unused.
+__all__ = [
+    "clean_dataset",
+    "split_dataset",
+    "save_splits",
+    "load_splits",
+    "build_splits",
+]
