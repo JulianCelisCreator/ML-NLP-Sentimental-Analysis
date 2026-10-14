@@ -3,7 +3,7 @@
 | File | What it is |
 | --- | --- |
 | `Workshop_1.pdf` | The brief, as handed out by the course |
-| `groupN_workshop1.pdf` | Our report — written outside the repository; add it here once final |
+| `groupN4_workshop1.pdf` | Our report — written outside the repository; add it here once final |
 
 ## Where each deliverable lives
 
