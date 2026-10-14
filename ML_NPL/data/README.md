@@ -6,15 +6,20 @@ this file is tracked in git.
 
 | Layer | Path | What it holds | Produced by |
 | --- | --- | --- | --- |
-| **Bronze** | `bronze/disneyland_reviews.csv` | The Kaggle corpus exactly as published — 42,656 rows, Latin-1, duplicates and all | `poetry run python download_dataset.py` |
+| **Bronze** | `bronze/DisneylandReviews.csv` | The Kaggle corpus byte for byte — 42,656 rows, Latin-1, duplicates and all. SHA256 `3c5eb284…9e885c` | `poetry run python download_dataset.py` |
 | **Silver** | `silver/reviews.parquet` | Cleaned and conformed: 42,632 rows, deduplicated, `"missing"` turned into `NaT`, sentiment target attached | `poetry run python -m src.preprocessing` |
 | **Gold** | `gold/splits.json` | The frozen 70/15/15 stratified split, as row indices into silver | same command |
 
+`data/splits.json` is a byte-identical copy of the gold split, kept because the Workshop #1
+brief names that exact path. Silver and gold are written only when missing, so re-running
+the pipeline never re-draws the split.
+
 ## Why each boundary is where it is
 
-**Bronze is never touched.** It is the landing zone: if a cleaning rule turns out to be
-wrong, the pipeline can be replayed from a known origin instead of re-downloading and
-hoping Kaggle still serves the same version.
+**Bronze is never touched**, not even re-encoded: it is a byte copy of the Kaggle file, and
+`download_dataset.py` checks its SHA256 against the published one. It is the landing zone:
+if a cleaning rule turns out to be wrong, the pipeline can be replayed from a known origin
+instead of re-downloading and hoping Kaggle still serves the same version.
 
 **Silver is the cleaning boundary — and it is materialised on purpose.** Gold stores
 *positional indices* into silver, and those indices only mean anything against a frozen

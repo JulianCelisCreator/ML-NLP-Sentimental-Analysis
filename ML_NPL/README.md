@@ -1,7 +1,8 @@
-# src
+# ML_NPL
 
-Python package for the Team 4 sentiment-analysis project. See the
-[repository README](../README.md) for setup, layout and project status.
+Code for the Team 4 sentiment-analysis project; the importable package is `src/`. See the
+[repository README](../README.md) for setup, layout and project status, and
+[`data/README.md`](data/README.md) for the medallion data layers.
 
 ```python
 from src.dataset import load_reviews
@@ -16,13 +17,13 @@ clean = build_splits()                                     # clean + split -> da
 
 | Module | Responsibility |
 | --- | --- |
-| `dataset.py` | Acquisition: Kaggle download, schema validation, `load_reviews()` (UTF-8) |
+| `dataset.py` | Bronze: Kaggle download (byte-for-byte copy, SHA256-checked), schema validation, `load_reviews()` (Latin-1) |
 | `eda.py` | Analysis only: inventory, quality report, text metrics, n-grams. Owns the pure `sentiment_from_rating` / `parse_period` helpers |
 | `plots.py` | EDA figures |
-| `preprocessing.py` | Pipeline: clean → target → period → stratified 70/15/15 split → `splits.json` |
+| `preprocessing.py` | Silver + gold: clean → target → period → stratified 70/15/15 split → `splits.json` (written once) |
 | `features.py` | Learned features for the baselines (TF-IDF, scaler, class weights) — fitted on train only |
-| `dataset_info.py` | Required script: prints a structured dataset summary |
-| `baselines.py` | The three baseline classifiers (Workshop #1, pending) |
+| `dataset_info.py` | Required script: checksums of bronze plus a structured dataset summary |
+| `baselines.py` | The Workshop #1 baselines: majority class, Logistic Regression, Random Forest, Naive Bayes |
 | `data_loader.py` | Deprecated shim → import from `preprocessing` instead |
 # Data Processing Pipeline
 

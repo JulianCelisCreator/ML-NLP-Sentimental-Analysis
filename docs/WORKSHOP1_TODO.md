@@ -1,6 +1,6 @@
 # Workshop #1 — gap analysis
 
-Checked against `ML_NPL/docs/Workshop_1.pdf` on 1 October 2026. Each item says what the
+Checked against [`reports/workshop_1/Workshop_1.pdf`](../reports/workshop_1/Workshop_1.pdf) on 1 October 2026. Each item says what the
 brief asks for, whether it exists, and what is left. Work through it top-down: the
 sections are ordered by how much they put the grade at risk.
 
@@ -49,39 +49,27 @@ attached.
 
 ### 1b. ~~The old reproducibility problem~~ — resolved
 
-The committed notebook still shows the old numbers, and its Random Forest result
-(**macro-F1 0.4630**) does not reproduce: a clean run gives **0.3016**. Seed, library
-versions and the split were all checked and ruled out — the stored outputs predate the
-final state of `src/baselines.py` (the cell shows a Windows path, so it was run elsewhere
-and not re-run before committing).
-
-The brief is explicit: *"All reported metric values must be reproducible by running the
-submitted code."* This is the single biggest risk in the deliverable.
-
-```bash
-cd ML_NPL
-poetry run jupyter nbconvert --to notebook --execute --inplace notebooks/baselines.ipynb
-```
-
-The notebook also needs a fourth confusion matrix and the AUC column in its table.
+The notebook used to store a Random Forest macro-F1 of 0.4630 that a clean run could not
+reproduce (0.3016). It was re-executed and now matches `python -m src.baselines` exactly.
 
 ### 2. ~~Dataset integrity verification~~ — done
 
-`src/dataset_info.py` now opens with a bronze-layer section: file count, size in bytes and
-MB, MD5 and SHA256, hashed in 1 MB chunks. For the current corpus:
+`download_dataset.py` copies the Kaggle file into bronze byte for byte and checks its
+SHA256; `src/dataset_info.py` prints file count, size, MD5 and SHA256 and says whether
+the hash matches. The published file:
 
 ```
-disneyland_reviews.csv   30.54 MB (32,022,233 bytes)
-md5     84f706ba94964ad8fcaa967d442d4482
-sha256  ee675f3bfd33b80bd7dfa787e616549633bdd8139b2804170da45273b05af7a5
+DisneylandReviews.csv   30.58 MB (32,064,878 bytes)
+md5     692b0b722715c60ad85cba505eddb4c9
+sha256  3c5eb28455a5156bbe337b3768fdd422a3311c1a91cb33214682bf80419e885c
 ```
 
-**Still to do:** copy that SHA256 into the README so a teammate can verify their download
-against it without running the script.
+The hash is also in the repository README. (An earlier version re-wrote the CSV as UTF-8,
+which is why an older hash, `ee675f3b…`, circulated: it was not the Kaggle file.)
 
-### 3. The report PDF  ← now the top priority
+### 3. The report PDF — in progress outside the repository
 
-Not started. The brief requires `groupN_workshop1.pdf` with: executive summary, dataset
+Being written outside the repo; add the final PDF to `reports/workshop_1/`. The brief requires `groupN_workshop1.pdf` with: executive summary, dataset
 description, EDA summary, preprocessing pipeline, baseline results table, and a discussion
 of *"what the baseline results reveal about problem difficulty, class balance, and
 features"*.

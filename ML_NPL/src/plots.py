@@ -313,7 +313,10 @@ def confusion_heatmap(matrix, labels, title="Confusion matrix", ax=None):
 
     matrix = np.asarray(matrix)
     row_totals = matrix.sum(axis=1, keepdims=True)
-    shade = np.divide(matrix, row_totals, where=row_totals != 0)
+    # out= is required: without it, rows that sum to 0 keep uninitialised memory.
+    shade = np.divide(
+        matrix, row_totals, out=np.zeros(matrix.shape), where=row_totals != 0
+    )
 
     ax = ax or plt.subplots(figsize=(5.2, 4.4))[1]
     image = ax.imshow(shade, cmap=CONFUSION_CMAP, vmin=0, vmax=1)

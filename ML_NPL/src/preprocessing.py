@@ -145,13 +145,26 @@ def load_silver(
     *,
     scheme: str = "three_class",
 ) -> pd.DataFrame:
-    """Return the silver layer, building it first if it is not on disk."""
+    """Return the silver layer, building it first if it is not on disk.
+
+    A silver file already on disk is never rebuilt, so a different ``scheme``
+    would silently get the old labels. That mismatch is detected and raised.
+    """
     source = Path(source)
     if not source.exists():
         build_silver(scheme=scheme, destination=source)
     frame = pd.read_parquet(source)
     frame["period"] = frame["period"].dt.to_period("M")
     frame[TARGET_COL] = frame[TARGET_COL].astype("category")
+
+    expected = set(sentiment_from_rating(pd.Series([1, 3, 5]), scheme=scheme))
+    stored = set(frame[TARGET_COL].cat.categories)
+    if stored != expected:
+        msg = (
+            f"{source} holds labels {sorted(stored)}, not the {scheme!r} scheme. "
+            "Delete data/silver and data/gold to rebuild them."
+        )
+        raise ValueError(msg)
     return frame
 
 
@@ -248,10 +261,14 @@ def build_splits(
     back from silver on disk rather than from a frame held in memory, so the
     indices in gold are guaranteed to address the same rows a later run will
     load.
+
+    Both layers are written only when missing: the split is generated once and
+    then reused, never re-drawn. Delete data/silver and data/gold to rebuild.
     """
     silver = load_silver(scheme=scheme)
-    x_train, x_val, x_test, *_ = split_dataset(silver)
-    save_splits(x_train, x_val, x_test, destination=destination)
+    if not Path(destination).exists():
+        x_train, x_val, x_test, *_ = split_dataset(silver)
+        save_splits(x_train, x_val, x_test, destination=destination)
     return silver
 
 

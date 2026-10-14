@@ -1,8 +1,8 @@
 """Supervised baselines for Workshop #1.
 
-Baseline 1 (this file, for now): Logistic Regression on the prepared features.
-Random Forest and a third model (Naive Bayes) slot in later through the same
-``evaluate`` helper.
+Four models, all evaluated through the same ``evaluate`` helper: a
+majority-class floor, Logistic Regression (linear), Random Forest (tree
+ensemble) and Multinomial Naive Bayes (the model of our choice).
 
 Why these choices:
 
@@ -14,9 +14,9 @@ Why these choices:
   useless. macro-F1 weights the 8.5% negative class equally, so it cannot be
   ignored for free. The majority-class baseline is reported precisely to make
   that floor visible.
-* **class_weight="balanced"** (computed in features.py) pushes back on the
-  9.4:1 imbalance instead of resampling, which would risk leaking across the
-  split.
+* **Balanced class weights** (computed from y_train in features.py) push back
+  on the 9.4:1 imbalance instead of resampling, which would risk leaking
+  across the split.
 
 Run it (from ML_NPL/):
 
@@ -28,6 +28,7 @@ from __future__ import annotations
 import random
 
 import numpy as np
+from scipy.sparse import hstack
 from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -38,9 +39,9 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler
 
-from .features import extract_features
+from .features import NUMERIC_FEATURES, extract_features
 from .preprocessing import RANDOM_STATE, TARGET_COL, build_splits, load_splits
 
 # The brief asks for seeds to be set for Python, numpy and sklearn at the start
@@ -61,7 +62,7 @@ def load_feature_splits():
     hands them to features.extract_features (which fits TF-IDF, the scaler and
     the class weights on the TRAIN split only).
     """
-    clean = build_splits()  # idempotent: regenerates splits.json if missing
+    clean = build_splits()  # writes silver/gold only if they are missing
     splits = load_splits()
 
     def subset(name):
@@ -141,6 +142,24 @@ def evaluate(name, model, x_val, y_val) -> dict:
     }
 
 
+def _scale_for_naive_bayes(x_train, x_val):
+    """Min-max scale the feature matrix to [0, 1] without densifying it."""
+    x_train, x_val = x_train.tocsc(), x_val.tocsc()
+    n_text = x_train.shape[1] - len(NUMERIC_FEATURES)
+
+    text_scaler = MaxAbsScaler()
+    numeric_scaler = MinMaxScaler()
+    train = hstack([
+        text_scaler.fit_transform(x_train[:, :n_text]),
+        numeric_scaler.fit_transform(x_train[:, n_text:].toarray()),
+    ]).tocsr()
+    val = hstack([
+        text_scaler.transform(x_val[:, :n_text]),
+        numeric_scaler.transform(x_val[:, n_text:].toarray()),
+    ]).tocsr()
+    return train, val
+
+
 def run() -> list[dict]:
     """Train and evaluate the baselines on the validation split."""
     data = load_feature_splits()
@@ -156,11 +175,12 @@ def run() -> list[dict]:
     )
 
     # Baseline 1 — Logistic Regression (linear model required by the PDF).
-    # class_weight balanced to fight the imbalance; lbfgs handles the
-    # multinomial (3-class) case and the sparse TF-IDF matrix fine.
+    # Balanced class weights (fitted on y_train in features.py) fight the
+    # imbalance; lbfgs handles the multinomial (3-class) case and the sparse
+    # TF-IDF matrix fine.
     logreg = LogisticRegression(
         max_iter=1000,
-        class_weight="balanced",
+        class_weight=data["class_weights"],
         random_state=RANDOM_STATE,
     )
     logreg.fit(data["x_train"], data["y_train"])
@@ -186,19 +206,20 @@ def run() -> list[dict]:
     rndmforestcl.fit(data["x_train"], data["y_train"])
     results.append(
         evaluate("Baseline 2 - Random Forest", rndmforestcl, data["x_val"], data["y_val"])
-        )
-    
+    )
 
     # Baseline 3 — Multinomial Naive Bayes, the "model of your choice" slot.
     #
     # It is the classical text-classification baseline and a genuinely
     # different family: generative and probabilistic, where the other two are
     # discriminative. It cannot take negative inputs, and StandardScaler
-    # produces them, so the matrix is re-scaled to [0, 1] here. The scaler is
-    # fitted on TRAIN only, exactly like every other learned transform.
-    minmax = MinMaxScaler()
-    x_train_nb = minmax.fit_transform(data["x_train"].toarray())
-    x_val_nb = minmax.transform(data["x_val"].toarray())
+    # produces them, so every column is re-scaled to [0, 1] here, fitted on
+    # TRAIN only like every other learned transform.
+    #
+    # The matrix stays sparse: densifying it costs ~17 GB. Every TF-IDF column
+    # has a minimum of 0, so MaxAbsScaler (sparse-safe) gives the same result
+    # as MinMaxScaler on that block; only the 10 numeric columns go dense.
+    x_train_nb, x_val_nb = _scale_for_naive_bayes(data["x_train"], data["x_val"])
 
     naive_bayes = MultinomialNB()
     naive_bayes.fit(x_train_nb, data["y_train"])

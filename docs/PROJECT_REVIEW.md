@@ -3,11 +3,11 @@
 **Team 4 — Sentiment Analysis (NLP).** Machine Learning 2026-III, Universidad Distrital
 Francisco José de Caldas.
 
-Last verified 1 October 2026. Every command below was executed on this checkout before
+Last verified 12 October 2026. Every command below was executed on this checkout before
 being written down, and every number comes from that run.
 
 **Pending work lives in [`WORKSHOP1_TODO.md`](WORKSHOP1_TODO.md)**, checked against
-`ML_NPL/docs/Workshop_1.pdf`. This document covers how to run the project and what state
+[`reports/workshop_1/Workshop_1.pdf`](../reports/workshop_1/Workshop_1.pdf). This document covers how to run the project and what state
 it is in; that one covers what is left.
 
 ---
@@ -16,7 +16,8 @@ it is in; that one covers what is left.
 
 ## 0. Prerequisites
 
-Python 3.12, Poetry 2.2, and a Kaggle account for the initial download.
+Python 3.12 or newer (3.14 also verified: identical results), Poetry 2.x, and a Kaggle
+account for the initial download. From the repository root:
 
 ```bash
 cd ML_NPL
@@ -45,8 +46,8 @@ Run from `ML_NPL/`. Each step writes what the next one reads.
 
 | # | Command | Produces | Verified result |
 | --- | --- | --- | --- |
-| 1 | `poetry run python download_dataset.py` | `data/bronze/disneyland_reviews.csv` | 30.54 MB, 42,656 rows |
-| 2 | `poetry run python -m src.dataset_info` | checksums + structured summary | sha256 `ee675f3b…05af7a5` |
+| 1 | `poetry run python download_dataset.py` | `data/bronze/DisneylandReviews.csv` | 30.58 MB, 42,656 rows, SHA256 checked |
+| 2 | `poetry run python -m src.dataset_info` | checksums + structured summary | sha256 `3c5eb284…9e885c` |
 | 3 | `poetry run python -m src.preprocessing` | `data/silver/reviews.parquet`, `data/gold/splits.json` (+ the spec alias `data/splits.json`) | 42,632 cleaned → 29,842 / 6,395 / 6,395 |
 | 4 | `poetry run python -m src.baselines` | the four baselines, evaluated on validation | see Part C |
 
@@ -72,7 +73,7 @@ so the stored numbers are reproducible from the command line.
 
 ```
 data/
-├── bronze/disneyland_reviews.csv   the Kaggle corpus as published, never edited
+├── bronze/DisneylandReviews.csv    the Kaggle file byte for byte, never edited
 ├── silver/reviews.parquet          cleaned, deduplicated, target attached
 └── gold/splits.json                the frozen 70/15/15 stratified split
 ```
@@ -89,7 +90,7 @@ lossless with `DataFrame.equals`.
 `data/splits.json` is also written, byte-identical to the gold copy, because the Workshop
 #1 brief names that exact path as a required artifact.
 
-Full detail in [`ML_NPL/data/README.md`](ML_NPL/data/README.md).
+Full detail in [`ML_NPL/data/README.md`](../ML_NPL/data/README.md).
 
 ## Code
 
@@ -168,21 +169,6 @@ models reproduce an ambiguity that is in the data.
 Resolved items have moved to [`WORKSHOP1_TODO.md`](WORKSHOP1_TODO.md). What remains open
 in the repository itself:
 
-### Files duplicated byte for byte
-
-| | |
-| --- | --- |
-| `reports/Workshop #1/Workshop_1.pdf` | `ML_NPL/docs/Workshop_1.pdf` |
-| `TeamsDistribution.pdf` | `ML_NPL/docs/TeamsDistribution (1).pdf` |
-
-`ML_NPL/docs/` is untracked while `reports/` is committed, so the copies will drift. Pick
-one location.
-
-### Two directories named `reports/`
-
-`reports/` at the repository root holds the workshop PDFs and is tracked;
-`ML_NPL/reports/` holds generated figures and is gitignored. Same name, opposite purpose.
-
 ### Lint
 
 `pylint src/ download_dataset.py` scores **9.60/10**. What remains is stylistic and worth
@@ -190,7 +176,7 @@ a decision rather than drift: `src/features.py` uses `X_train` / `X_val` / `X_te
 is standard ML notation pylint does not know about. Either silence the rule in that file
 or rename — leaving ten warnings is the worst of the three options.
 
-### `tests/` is empty
+### No tests
 
-`parse_period`, the label schemes and `clean_dataset` all carry logic worth pinning. The
-row counts (42,656 → 42,632) are asserted nowhere.
+There is no `tests/` directory yet. `parse_period`, the label schemes and `clean_dataset`
+all carry logic worth pinning. The row counts (42,656 → 42,632) are asserted nowhere.
