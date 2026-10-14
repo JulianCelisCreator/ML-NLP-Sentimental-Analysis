@@ -20,11 +20,13 @@ Why these choices:
 
 Run it (from ML_NPL/):
 
-    python -m src.baselines
+    python -m src.baselines                # validation: model comparison
+    python -m src.baselines --split test   # test: final numbers, for Workshop #2's table
 """
 
 from __future__ import annotations
 
+import argparse
 import random
 
 import numpy as np
@@ -142,9 +144,9 @@ def evaluate(name, model, x_val, y_val) -> dict:
     }
 
 
-def _scale_for_naive_bayes(x_train, x_val):
+def _scale_for_naive_bayes(x_train, x_eval):
     """Min-max scale the feature matrix to [0, 1] without densifying it."""
-    x_train, x_val = x_train.tocsc(), x_val.tocsc()
+    x_train, x_eval = x_train.tocsc(), x_eval.tocsc()
     n_text = x_train.shape[1] - len(NUMERIC_FEATURES)
 
     text_scaler = MaxAbsScaler()
@@ -154,15 +156,17 @@ def _scale_for_naive_bayes(x_train, x_val):
         numeric_scaler.fit_transform(x_train[:, n_text:].toarray()),
     ]).tocsr()
     val = hstack([
-        text_scaler.transform(x_val[:, :n_text]),
-        numeric_scaler.transform(x_val[:, n_text:].toarray()),
+        text_scaler.transform(x_eval[:, :n_text]),
+        numeric_scaler.transform(x_eval[:, n_text:].toarray()),
     ]).tocsr()
     return train, val
 
 
-def run() -> list[dict]:
-    """Train and evaluate the baselines on the validation split."""
+def run(split: str = "validation") -> list[dict]:
+    """Train on train, evaluate on `split` ("validation" by default, or "test")."""
     data = load_feature_splits()
+    key = {"validation": "val", "test": "test"}[split]
+    x_eval, y_eval = data[f"x_{key}"], data[f"y_{key}"]
     results = []
 
     # Baseline 0 — majority class. The floor every real model must beat:
@@ -171,7 +175,7 @@ def run() -> list[dict]:
     majority = DummyClassifier(strategy="most_frequent")
     majority.fit(data["x_train"], data["y_train"])
     results.append(
-        evaluate("Baseline 0 - Majority class", majority, data["x_val"], data["y_val"])
+        evaluate("Baseline 0 - Majority class", majority, x_eval, y_eval)
     )
 
     # Baseline 1 — Logistic Regression (linear model required by the PDF).
@@ -185,7 +189,7 @@ def run() -> list[dict]:
     )
     logreg.fit(data["x_train"], data["y_train"])
     results.append(
-        evaluate("Baseline 1 - Logistic Regression", logreg, data["x_val"], data["y_val"])
+        evaluate("Baseline 1 - Logistic Regression", logreg, x_eval, y_eval)
     )
 
     # Baseline 2 — Random Forest, the tree-based ensemble the brief requires.
@@ -205,7 +209,7 @@ def run() -> list[dict]:
     )
     rndmforestcl.fit(data["x_train"], data["y_train"])
     results.append(
-        evaluate("Baseline 2 - Random Forest", rndmforestcl, data["x_val"], data["y_val"])
+        evaluate("Baseline 2 - Random Forest", rndmforestcl, x_eval, y_eval)
     )
 
     # Baseline 3 — Multinomial Naive Bayes, the "model of your choice" slot.
@@ -219,16 +223,16 @@ def run() -> list[dict]:
     # The matrix stays sparse: densifying it costs ~17 GB. Every TF-IDF column
     # has a minimum of 0, so MaxAbsScaler (sparse-safe) gives the same result
     # as MinMaxScaler on that block; only the 10 numeric columns go dense.
-    x_train_nb, x_val_nb = _scale_for_naive_bayes(data["x_train"], data["x_val"])
+    x_train_nb, x_eval_nb = _scale_for_naive_bayes(data["x_train"], x_eval)
 
     naive_bayes = MultinomialNB()
     naive_bayes.fit(x_train_nb, data["y_train"])
     results.append(
-        evaluate("Baseline 3 - Multinomial Naive Bayes", naive_bayes, x_val_nb, data["y_val"])
+        evaluate("Baseline 3 - Multinomial Naive Bayes", naive_bayes, x_eval_nb, y_eval)
     )
 
     # Comparison table (macro-F1 is what ranks them).
-    print(f"\n{'=' * 60}\nSUMMARY (validation)\n{'=' * 60}")
+    print(f"\n{'=' * 60}\nSUMMARY ({split})\n{'=' * 60}")
     print(f"{'model':<38}{'accuracy':>10}{'AUC-ROC':>10}{'macro-F1':>10}")
     for r in sorted(results, key=lambda r: r["macro_f1"], reverse=True):
         auc_text = f"{r['auc_roc']:>10.4f}" if r["auc_roc"] is not None else f"{'n/a':>10}"
@@ -238,4 +242,6 @@ def run() -> list[dict]:
 
 
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser(description="Workshop #1 baselines")
+    parser.add_argument("--split", default="validation", choices=["validation", "test"])
+    run(parser.parse_args().split)
