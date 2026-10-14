@@ -22,28 +22,28 @@ The project is built around a dataset of **42,656 Disneyland park reviews**, fea
 ## Repository Structure
 
 ```
-ML_NPL/
-├── checkpoints/          # Saved model weights (populated from Workshop 2 onward)
-├── data/                 # Medallion layers: bronze (raw) / silver (clean) / gold (splits)
-├── notebooks/             # Jupyter notebooks for exploration and analysis (EDA, experiments)
-├── runs/                  # Training logs (wandb / TensorBoard)
-├── src/                    # Entry-point / orchestration scripts that use the ml_npl package
-├── download_dataset.py     # Script to download and verify dataset integrity
-├── poetry.lock
-├── pyproject.toml
-└── README.md               # This file
-```
-
-Reports for each workshop are kept separately, outside the codebase:
-
-```
-reports/
-├── Workshop #1/   # Data Preparation & Supervised Learning Baselines
-├── Workshop #2/   # Deep Learning Basics
-├── Workshop #3/   # Reinforcement Learning
-├── Workshop #4/   # Unsupervised Learning
-├── Workshop #5/   # Generative Models (GANs)
-└── Workshop #6/   # Domain Adaptation
+.
+├── README.md                 # This file
+├── docs/                     # Team working documents
+│   ├── PROJECT_REVIEW.md     #   how to run the project, current results, known issues
+│   ├── WORKSHOP1_TODO.md     #   Workshop #1 gap analysis against the brief
+│   └── TeamsDistribution.pdf #   course team assignment
+├── reports/                  # One folder per workshop: the brief PDF and, later, our report
+│   ├── workshop_1/           #   Data Preparation & Supervised Learning Baselines
+│   ├── workshop_2/           #   Deep Learning Basics
+│   ├── workshop_3/           #   Reinforcement Learning
+│   ├── workshop_4/           #   Unsupervised Learning
+│   ├── workshop_5/           #   Generative Models (GANs)
+│   └── workshop_6/           #   Domain Adaptation
+└── ML_NPL/                   # The code: one Poetry project shared by every workshop
+    ├── src/                  #   Python package (dataset, preprocessing, features, baselines, …)
+    ├── notebooks/            #   eda.ipynb, baselines.ipynb
+    ├── data/                 #   Medallion layers: bronze / silver / gold (gitignored)
+    ├── checkpoints/          #   Saved model weights (from Workshop #2 onward)
+    ├── runs/                 #   Training logs (from Workshop #2 onward)
+    ├── download_dataset.py   #   Downloads the corpus and verifies its SHA256
+    ├── pyproject.toml
+    └── poetry.lock
 ```
 
 ---
@@ -52,44 +52,52 @@ reports/
 
 | Report | Focus Area | Key Implementation Goals |
 | :--- | :--- | :--- |
-| `reports/Workshop #1/` | Supervised Learning | EDA, feature engineering, and baseline classification models (linear, trees, ensembles). |
-| `reports/Workshop #2/` | Deep Learning Basics | Sequence modeling with RNNs/LSTMs and transformers using TensorFlow/PyTorch. |
-| `reports/Workshop #3/` | Reinforcement Learning | Reward design, environment setup, and Q-learning or policy gradient methods. |
-| `reports/Workshop #4/` | Unsupervised Learning | Autoencoders & VAEs for dimensionality reduction and latent space analysis. |
-| `reports/Workshop #5/` | Generative Models (GANs) | Generator/discriminator architecture, training stability, and synthetic data generation. |
-| `reports/Workshop #6/` | Domain Adaptation | Advanced transfer learning, model interpretability (attention/saliency), and evaluation. |
+| `reports/workshop_1/` | Supervised Learning | EDA, feature engineering, and baseline classification models (linear, trees, ensembles). |
+| `reports/workshop_2/` | Deep Learning Basics | Sequence modeling with RNNs/LSTMs and transformers using TensorFlow/PyTorch. |
+| `reports/workshop_3/` | Reinforcement Learning | Reward design, environment setup, and Q-learning or policy gradient methods. |
+| `reports/workshop_4/` | Unsupervised Learning | Autoencoders & VAEs for dimensionality reduction and latent space analysis. |
+| `reports/workshop_5/` | Generative Models (GANs) | Generator/discriminator architecture, training stability, and synthetic data generation. |
+| `reports/workshop_6/` | Domain Adaptation | Advanced transfer learning, model interpretability (attention/saliency), and evaluation. |
 
 ---
 
 ## Setup
 
 This project uses [Poetry](https://python-poetry.org/) for dependency management.
+Every command below runs from `ML_NPL/`.
 
 ```bash
-# Install dependencies
-poetry install
-
-# Activate the environment
-poetry shell
+cd ML_NPL
+poetry install                 # creates the environment and installs the lock file
+source .venv/bin/activate      # optional; otherwise prefix commands with `poetry run`
 ```
 
 ## Reproducing Results
 
 ```bash
-# 1. Download and verify the dataset
-python download_dataset.py
+# 1. Download the corpus into data/bronze/ and verify its SHA256 (needs Kaggle credentials)
+poetry run python download_dataset.py
 
-# 2. Run the data pipeline / baselines (see reports/Workshop #1/ for details)
-python -m ml_npl.baselines
+# 2. Clean and split: data/silver/ and data/gold/splits.json
+poetry run python -m src.preprocessing
+
+# 3. Train and evaluate the four Workshop #1 baselines on the validation split
+poetry run python -m src.baselines
 ```
 
-Train/validation/test splits are fixed and stored in `data/gold/splits.json` — they are generated once and reused across all workshops to prevent data leakage and ensure reproducibility.
+No Kaggle account? Place Kaggle's `DisneylandReviews.csv` in `ML_NPL/data/bronze/` by hand;
+step 1 then only verifies it. The file must hash to
+`3c5eb28455a5156bbe337b3768fdd422a3311c1a91cb33214682bf80419e885c`.
+
+Train/validation/test splits are fixed and stored in `data/gold/splits.json`. They are
+generated once and reused across all workshops, to prevent data leakage and keep results
+comparable.
 
 ---
 
 ## Guidelines Followed
 
-* **Reproducibility:** random seeds fixed for numpy, Python, and sklearn/torch at the start of every script.
+* **Reproducibility:** random seeds fixed for Python and numpy, and `random_state=42` passed to every sklearn estimator.
 * **No data leakage:** all statistics and transformations are fit on the training set only.
 * **Consistent splits:** `data/gold/splits.json` is generated once and never re-randomized.
 * **Medallion layers:** `data/` separates bronze (as published), silver (cleaned, materialised) and gold (the frozen split). See [`ML_NPL/data/README.md`](ML_NPL/data/README.md).

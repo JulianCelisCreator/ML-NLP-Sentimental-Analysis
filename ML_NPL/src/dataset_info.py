@@ -11,12 +11,9 @@ Run it with:
 
 from __future__ import annotations
 
-import hashlib
-from pathlib import Path
-
 import pandas as pd
 
-from .dataset import BRONZE_DIR, load_reviews, summary
+from .dataset import BRONZE_DIR, EXPECTED_SHA256, file_digest, load_reviews, summary
 from .eda import RATING_COL, add_text_features, class_balance, column_inventory
 from .preprocessing import TARGET_COL, clean_dataset
 
@@ -25,15 +22,6 @@ NUMERIC_RANGE_COLUMNS = ["n_words", "n_chars", "n_sentences", "unique_ratio"]
 
 def _section(title: str) -> None:
     print(f"\n{'=' * 60}\n{title}\n{'=' * 60}")
-
-
-def file_digest(path: Path, algorithm: str = "sha256") -> str:
-    """Hash a file in chunks, so a 31 MB corpus never lands in memory twice."""
-    digest = hashlib.new(algorithm)
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def describe_bronze() -> None:
@@ -53,8 +41,10 @@ def describe_bronze() -> None:
         size_mb = path.stat().st_size / 1024**2
         print(f"\n  {path.name}")
         print(f"    size   : {size_mb:,.2f} MB ({path.stat().st_size:,} bytes)")
+        sha256 = file_digest(path, "sha256")
+        verdict = "matches Kaggle" if sha256 == EXPECTED_SHA256 else "DOES NOT match Kaggle"
         print(f"    md5    : {file_digest(path, 'md5')}")
-        print(f"    sha256 : {file_digest(path, 'sha256')}")
+        print(f"    sha256 : {sha256} ({verdict})")
 
 
 def main() -> int:

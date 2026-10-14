@@ -8,6 +8,8 @@ the CSV directly, so the cleaning and validation rules live in one place.
 
 from __future__ import annotations
 
+import hashlib
+import shutil
 from pathlib import Path
 
 import kagglehub
@@ -26,7 +28,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # untouched is what lets the whole pipeline be replayed from a known origin.
 DATA_DIR = PROJECT_ROOT / "data"
 BRONZE_DIR = DATA_DIR / "bronze"
-DEFAULT_EXPORT_PATH = BRONZE_DIR / "disneyland_reviews.csv"
+# Kaggle's own filename: bronze keeps the file exactly as published, name included.
+DEFAULT_EXPORT_PATH = BRONZE_DIR / "DisneylandReviews.csv"
+
+# SHA256 of the CSV as Kaggle publishes it (32,064,878 bytes). Bronze is a
+# byte-for-byte copy, so a teammate's download must hash to exactly this.
+EXPECTED_SHA256 = "3c5eb28455a5156bbe337b3768fdd422a3311c1a91cb33214682bf80419e885c"
 
 # Pre-medallion location, still honoured so an existing checkout keeps working
 # without re-downloading 31 MB.
@@ -148,11 +155,14 @@ def export_csv(
     *,
     overwrite: bool = False,
 ) -> Path:
-    """Write the whole corpus to a CSV inside the project and return its path.
+    """Copy the Kaggle CSV into bronze, byte for byte, and return its path.
 
-    The Kaggle copy is Latin-1; this export is UTF-8, so every later step reads
-    it without the encoding dance. The file is reproducible from the dataset
-    handle, so it belongs in .gitignore rather than in a commit.
+    The file is copied, never re-written through pandas: a round-trip would
+    change the encoding (Kaggle ships Latin-1) and the quoting, so the checksum
+    would no longer match the published file. It always comes from the Kaggle
+    download, never from a CSV already in bronze, so re-running cannot compound
+    an earlier bad copy. The file is reproducible from the dataset handle, so it
+    belongs in .gitignore rather than in a commit.
     """
     destination = Path(destination)
     if destination.exists() and not overwrite:
@@ -160,9 +170,17 @@ def export_csv(
         raise FileExistsError(msg)
 
     destination.parent.mkdir(parents=True, exist_ok=True)
-    frame = load_reviews()
-    frame.to_csv(destination, index=False, encoding="utf-8")
+    shutil.copyfile(_find_reviews_csv(download_raw()), destination)
     return destination
+
+
+def file_digest(path: Path | str, algorithm: str = "sha256") -> str:
+    """Hash a file in chunks, so a 31 MB corpus never lands in memory twice."""
+    digest = hashlib.new(algorithm)
+    with Path(path).open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def summary(frame: pd.DataFrame) -> str:
